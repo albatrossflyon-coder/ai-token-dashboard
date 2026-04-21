@@ -185,8 +185,9 @@ This dashboard is part of the **claude-operator-kit** — a complete system for 
 | Claude Pro | $20/month | The AI |
 | ai-token-dashboard | Free | Token monitoring |
 | fff | Free | Token-efficient file search |
-| jCodeMunch | Free | Token-efficient code navigation |
-| jDocMunch | Free | Token-efficient doc navigation |
+| jCodeMunch + jDocMunch + jDataMunch | Free | Token-efficient code/doc/data navigation |
+| jmunch-mcp | Free | MCP response compressor (88-99% reduction) |
+| RTK | Free | Shell output compressor (60-90% reduction) |
 
 **Total: $20/month.**
 
@@ -203,6 +204,9 @@ This dashboard wouldn't exist without these open-source projects:
 | **fff** — Fast File Finder | [dmtrKovalenko](https://github.com/dmtrKovalenko/fff.nvim) | Frecency-ranked file search. Replaces bash find/grep. The tool that proved 50-75% token savings were possible. |
 | **jCodeMunch MCP** | [jgravelle](https://github.com/jgravelle/jcodemunch-mcp) | Semantic code navigation via MCP. Reads symbols, not whole files. Core of the token-efficient stack. |
 | **jDocMunch MCP** | [jgravelle](https://github.com/jgravelle/jdocmunch-mcp) | Section-level markdown navigation via MCP. Same author, same philosophy. |
+| **jDataMunch MCP** | [jgravelle](https://github.com/jgravelle/jdatamunch-mcp) | Structured data navigation via MCP. Queries datasets, describes columns, samples rows — not raw file dumps. |
+| **jmunch-mcp** | [jgravelle](https://github.com/jgravelle/jmunch-mcp) | MCP response compressor proxy. Wraps jCodeMunch, jDocMunch, jDataMunch and cuts their response token cost 88-99%. |
+| **RTK** | [rtk-ai](https://github.com/rtk-ai/rtk) | Rust Token Killer. CLI proxy that compresses shell command output 60-90% before it hits your AI's context. |
 | **Hermes Agent** | [NousResearch / Hermes team](https://github.com/NousResearch) | The AI agent whose state.db gave us the richest token data of any agent — including actual API cost and reasoning tokens. |
 | **Claw Code** | [ultraworkers](https://github.com/ultraworkers/claw-code) | Open-source Rust parity implementation of Claude Code. Same JSONL session format — sessions in `~/.claw/sessions/`. |
 
