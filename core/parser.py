@@ -5,6 +5,7 @@ Detects and reads session data for each supported AI agent.
 Supported:
   - Claude Code (CC)         ~/.claude/projects/**/*.jsonl
   - Claude Code Desktop      same path as CC (same session format)
+  - GitHub Copilot CLI       ~/.copilot/logs/process-*.log
   - Hermes Agent             ~/.hermes/state.db  (SQLite)
   - Claw Code                ~/.claw/sessions/**/*.jsonl  (ultraworkers/claw-code)
   - Gemini CLI               ~/.gemini/history/* (permission-restricted — limited support)
@@ -12,7 +13,7 @@ Supported:
 """
 
 import json
-import os
+import re
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,11 +23,19 @@ MODEL_LIMITS = {
     "claude-sonnet-4-6": 200_000,
     "claude-opus-4-6":   200_000,
     "claude-haiku-4-5":  200_000,
+    "gpt-5.4":           272_000,
     "gemini-2.0-flash":  1_000_000,
     "gemini-1.5-pro":    2_000_000,
     "gemini-1.5-flash":  1_000_000,
 }
 DEFAULT_LIMIT = 200_000
+
+COPILOT_MODEL_RE = re.compile(r"Using default model:\s+(.+)$")
+COPILOT_SESSION_NAME_RE = re.compile(r'Session named:\s+"(.+)"')
+COPILOT_WORKSPACE_RE = re.compile(r"Workspace initialized:\s+([0-9a-f-]+)")
+COPILOT_UTILIZATION_RE = re.compile(
+    r"CompactionProcessor: Utilization\s+([\d.]+)%\s+\((\d+)/(\d+)\s+tokens\)"
+)
 
 # ── Pricing per million tokens (USD) ─────────────────────────────────────────
 PRICING = {
@@ -137,6 +146,100 @@ def parse_cc(path: Path | None = None) -> SessionData:
     data.total_context = data.input_tokens + data.cache_read + data.cache_write
     data.context_limit = MODEL_LIMITS.get(data.model, DEFAULT_LIMIT)
     data.context_pct   = min(100.0, data.total_context / data.context_limit * 100)
+    return data
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GitHub Copilot CLI
+# ─────────────────────────────────────────────────────────────────────────────
+
+def find_copilot_log() -> Path | None:
+    """Most-recently-modified Copilot process log under ~/.copilot/logs/."""
+    base = Path.home() / ".copilot" / "logs"
+    if not base.exists():
+        return None
+    files = list(base.glob("process-*.log"))
+    return max(files, key=lambda p: p.stat().st_mtime) if files else None
+
+
+def parse_copilot(path: Path | None = None) -> SessionData:
+    """
+    Parse Copilot CLI process logs.
+
+    Current Copilot logs expose session identity, active model, and compaction
+    utilization. They do not expose a per-turn input/output/cache breakdown, so
+    the dashboard reports total context accurately and marks the detailed token
+    breakdown as unavailable.
+    """
+    data = SessionData(agent="GitHub Copilot CLI")
+
+    if path is None:
+        path = find_copilot_log()
+    if path is None or not path.exists():
+        data.error = "No Copilot log found. Start GitHub Copilot CLI first."
+        return data
+
+    data.session_file = path.name
+    latest_total_context = 0
+    latest_context_limit = MODEL_LIMITS.get(data.model, DEFAULT_LIMIT)
+    latest_context_pct = 0.0
+
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line:
+                    continue
+
+                if "Sending request to the AI model" in line:
+                    data.messages += 1
+
+                model_match = COPILOT_MODEL_RE.search(line)
+                if model_match:
+                    data.model = model_match.group(1).strip()
+
+                session_match = COPILOT_SESSION_NAME_RE.search(line)
+                if session_match:
+                    data.session_file = session_match.group(1).strip()
+                    data.extra["title"] = data.session_file
+
+                workspace_match = COPILOT_WORKSPACE_RE.search(line)
+                if workspace_match:
+                    data.extra["workspace_id"] = workspace_match.group(1)
+
+                utilization_match = COPILOT_UTILIZATION_RE.search(line)
+                if utilization_match:
+                    latest_context_pct = float(utilization_match.group(1))
+                    latest_total_context = int(utilization_match.group(2))
+                    latest_context_limit = int(utilization_match.group(3))
+
+                lower_line = line.lower()
+                if "compact" in lower_line and "below threshold" not in lower_line:
+                    data.compacted = True
+
+    except (IOError, OSError) as e:
+        data.error = str(e)
+        return data
+
+    if data.model == "unknown":
+        data.model = "gpt-5.4"
+
+    data.total_context = latest_total_context
+    data.context_limit = latest_context_limit or MODEL_LIMITS.get(data.model, DEFAULT_LIMIT)
+    data.context_pct = (
+        latest_context_pct
+        if latest_context_pct
+        else min(100.0, data.total_context / max(data.context_limit, 1) * 100)
+    )
+    data.input_tokens = 0
+    data.output_tokens = 0
+    data.cache_read = 0
+    data.cache_write = 0
+    data.output_total = 0
+    data.extra["cost_unavailable"] = True
+    data.extra["usage_source"] = "copilot-log-utilization"
+    data.extra["token_breakdown_unavailable"] = True
+    data.extra["log_file"] = path.name
     return data
 
 
@@ -339,6 +442,7 @@ AGENTS = {
     "cc":      parse_cc,
     "claude":  parse_cc,
     "desktop": parse_cc,
+    "copilot": parse_copilot,
     "hermes":  parse_hermes,
     "claw":    parse_claw,
     "gemini":  parse_gemini,

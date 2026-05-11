@@ -53,6 +53,7 @@ Until now.
 |-------|--------|---------------|
 | **Claude Code** | ✅ Full support | `~/.claude/projects/**/*.jsonl` |
 | **Claude Code Desktop** | ✅ Full support | Same as Claude Code |
+| **GitHub Copilot CLI** | ⚠️ Partial (session + context from logs) | `~/.copilot/logs/process-*.log` |
 | **Hermes Agent** | ✅ Full support | `~/.hermes/state.db` (SQLite) |
 | **Claw Code** | ✅ Full support | `~/.claw/sessions/**/*.jsonl` |
 | **Gemini CLI** | ⚠️ Limited (Windows permission restriction) | `~/.gemini/history/*` |
@@ -67,6 +68,9 @@ Until now.
 ```bash
 # Claude Code (default)
 python delivery/dashboard.py
+
+# GitHub Copilot CLI
+python delivery/dashboard.py --agent copilot
 
 # Hermes
 python delivery/dashboard.py --agent hermes
@@ -85,6 +89,7 @@ python delivery/dashboard.py --agent hermes --once
 
 ```bash
 python delivery/cli.py --agent cc
+python delivery/cli.py --agent copilot
 python delivery/cli.py --agent hermes
 python delivery/cli.py --agent claw
 python delivery/cli.py --agent all
@@ -107,7 +112,7 @@ Any MCP-compatible agent gets three tools:
 No MCP package? Falls back to HTTP automatically:
 ```bash
 python delivery/mcp_server.py --http
-# GET http://localhost:7421/status?agent=hermes
+# GET http://localhost:7421/status?agent=copilot
 # GET http://localhost:7421/all
 ```
 
@@ -183,7 +188,7 @@ This dashboard is part of the **claude-operator-kit** — a complete system for 
 | Tool | Cost | Purpose |
 |------|------|---------|
 | Claude Pro | $20/month | The AI |
-| ai-token-dashboard | Free | Token monitoring |
+| ai-token-dashboard | Free | Token monitoring across Claude Code, Copilot, Hermes, Claw, Gemini |
 | fff | Free | Token-efficient file search |
 | jCodeMunch + jDocMunch + jDataMunch | Free | Token-efficient code/doc/data navigation |
 | jmunch-mcp | Free | MCP response compressor (88-99% reduction) |
@@ -232,6 +237,11 @@ Prices used in cost calculations (update `core/parser.py` if Anthropic changes r
 |-----------|--------------|
 | Input | $0.075 |
 | Output | $0.30 |
+
+### GitHub Copilot CLI
+Copilot support currently reads session/model/context utilization from local process logs.
+Those logs do not expose input/output/cache token splits or cost, so the dashboard shows
+accurate total context but marks the detailed breakdown as unavailable.
 
 ---
 

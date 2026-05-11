@@ -114,7 +114,7 @@ def run_http_fallback(port: int = 7421) -> None:
             elif parsed.path == "/detail":
                 body = _detail_dict(agent)
             elif parsed.path == "/all":
-                body = {a: _status_dict(a) for a in ["cc", "hermes", "gemini"]}
+                body = {a: _status_dict(a) for a in ["cc", "copilot", "hermes", "claw", "gemini"]}
             elif parsed.path == "/health":
                 body = {"status": "ok", "mode": "http-fallback"}
             else:
@@ -129,8 +129,8 @@ def run_http_fallback(port: int = 7421) -> None:
 
     print(f"AI Token Dashboard — HTTP fallback mode (MCP package not installed)")
     print(f"Listening on http://localhost:{port}")
-    print(f"  GET /status?agent=cc|hermes|gemini")
-    print(f"  GET /detail?agent=cc|hermes|gemini")
+    print(f"  GET /status?agent=cc|copilot|hermes|claw|gemini")
+    print(f"  GET /detail?agent=cc|copilot|hermes|claw|gemini")
     print(f"  GET /all")
     print(f"Ctrl+C to stop")
     HTTPServer(("", port), Handler).serve_forever()
@@ -158,7 +158,7 @@ def run_mcp() -> None:
                     "properties": {
                         "agent": {
                             "type": "string",
-                            "enum": ["cc", "hermes", "gemini", "all"],
+                            "enum": ["cc", "copilot", "hermes", "claw", "gemini", "all"],
                             "default": "cc",
                             "description": "Which agent to check",
                         }
@@ -176,7 +176,7 @@ def run_mcp() -> None:
                     "properties": {
                         "agent": {
                             "type": "string",
-                            "enum": ["cc", "hermes", "gemini"],
+                            "enum": ["cc", "copilot", "hermes", "claw", "gemini"],
                             "default": "cc",
                         }
                     },
@@ -194,7 +194,7 @@ def run_mcp() -> None:
         if name == "get_token_status":
             agent = arguments.get("agent", "cc")
             if agent == "all":
-                result = {a: _status_dict(a) for a in ["cc", "hermes", "gemini"]}
+                result = {a: _status_dict(a) for a in ["cc", "copilot", "hermes", "claw", "gemini"]}
             else:
                 result = _status_dict(agent)
             return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
@@ -204,7 +204,7 @@ def run_mcp() -> None:
             return [types.TextContent(type="text", text=json.dumps(_detail_dict(agent), indent=2))]
 
         if name == "get_all_agents":
-            result = {a: _status_dict(a) for a in ["cc", "hermes", "gemini"]}
+            result = {a: _status_dict(a) for a in ["cc", "copilot", "hermes", "claw", "gemini"]}
             return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
         return [types.TextContent(type="text", text=json.dumps({"error": f"Unknown tool: {name}"}))]

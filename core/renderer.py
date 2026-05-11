@@ -67,6 +67,7 @@ def render(data: SessionData) -> str:
     cost      = data.cost_usd
     msgs      = data.messages
     velocity  = data.output_total / max(msgs, 1)
+    detailed_breakdown_available = not data.extra.get("token_breakdown_unavailable")
 
     cached_all = data.cache_read + data.cache_write
     cache_eff  = (data.cache_read / cached_all * 100) if cached_all else 0.0
@@ -86,18 +87,48 @@ def render(data: SessionData) -> str:
         _info(f"{DIM}session: {data.session_file[:42]}{RESET}"),
         _div(),
         _row("CONTEXT",  _bar(ctx_pct),                    f"{ctx_pct:5.1f}%  {ctx_tag}"),
-        _row("COST",     _bar(min(cost / 5.0 * 100, 100)), f"${cost:.4f}  {DIM}(est, $5=full){RESET}"),
+        _row(
+            "COST",
+            _bar(min(cost / 5.0 * 100, 100)),
+            f"${cost:.4f}  {DIM}(est, $5=full){RESET}"
+            if not data.extra.get("cost_unavailable")
+            else f"{DIM}n/a from current logs{RESET}",
+        ),
         _row("MESSAGES", _bar(msgs / 50 * 100),            f"{msgs:3d}  {DIM}(30+ = risk){RESET}"),
-        _row("VELOCITY", _bar(velocity / 2000 * 100),      f"{velocity:,.0f} tok/msg"),
+        _row(
+            "VELOCITY",
+            _bar(velocity / 2000 * 100),
+            f"{velocity:,.0f} tok/msg" if detailed_breakdown_available else f"{DIM}n/a from current logs{RESET}",
+        ),
         _div(),
         _info(f"{BOLD}TOKEN BREAKDOWN{RESET}"),
-        _info(f"  Input (fresh):   {data.input_tokens:>10,}   {DIM}@ $3.00/M{RESET}"),
-        _info(f"  Cache READ:      {data.cache_read:>10,}   {DIM}@ $0.30/M  ← cheap{RESET}"),
-        _info(f"  Cache CREATED:   {data.cache_write:>10,}   {DIM}@ $3.75/M{RESET}"),
-        _info(f"  Output:          {data.output_tokens:>10,}   {DIM}@ $15.00/M{RESET}"),
+        _info(
+            f"  Input (fresh):   {data.input_tokens:>10,}   {DIM}@ $3.00/M{RESET}"
+            if detailed_breakdown_available
+            else f"  Input/cache split: {DIM}not exposed by Copilot logs{RESET}"
+        ),
+        _info(
+            f"  Cache READ:      {data.cache_read:>10,}   {DIM}@ $0.30/M  ← cheap{RESET}"
+            if detailed_breakdown_available
+            else f"  Cache READ:      {DIM}n/a{RESET}"
+        ),
+        _info(
+            f"  Cache CREATED:   {data.cache_write:>10,}   {DIM}@ $3.75/M{RESET}"
+            if detailed_breakdown_available
+            else f"  Cache CREATED:   {DIM}n/a{RESET}"
+        ),
+        _info(
+            f"  Output:          {data.output_tokens:>10,}   {DIM}@ $15.00/M{RESET}"
+            if detailed_breakdown_available
+            else f"  Output:          {DIM}n/a{RESET}"
+        ),
         _info(f"  Total context:   {data.total_context:>10,}   {DIM}/ {data.context_limit:,}{RESET}"),
         _div(),
-        _info(f"  Cache efficiency : {cache_eff:5.1f}%   {DIM}(high = lower cost){RESET}"),
+        _info(
+            f"  Cache efficiency : {cache_eff:5.1f}%   {DIM}(high = lower cost){RESET}"
+            if detailed_breakdown_available
+            else f"  Cache efficiency : {DIM}n/a{RESET}"
+        ),
         _info(f"  Tool calls       : {data.tool_calls:5d}"),
         _info(f"  Compacted        : {'YES' if data.compacted else 'no'}"),
         _info(f"  Degradation risk : {rc}{risk}{RESET}   {DIM}(Anthropic research){RESET}"),
@@ -108,6 +139,8 @@ def render(data: SessionData) -> str:
         lines.append(_info(f"  Reasoning tokens : {data.extra['reasoning_tokens']:>10,}"))
     if data.extra.get("actual_cost_usd"):
         lines.append(_info(f"  Actual cost (API): ${data.extra['actual_cost_usd']:.4f}"))
+    if data.extra.get("usage_source") == "copilot-log-utilization":
+        lines.append(_info(f"  Token source      : Copilot compaction log"))
 
     lines.append(_div())
 

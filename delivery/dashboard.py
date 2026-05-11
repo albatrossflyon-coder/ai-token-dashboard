@@ -5,13 +5,14 @@ Live visual dashboard. Runs in a second terminal alongside your AI agent.
 
 Usage:
   python dashboard.py                    # auto-detects Claude Code session
+  python dashboard.py --agent copilot    # GitHub Copilot CLI
   python dashboard.py --agent hermes     # Hermes Agent
   python dashboard.py --agent gemini     # Gemini CLI
   python dashboard.py --agent cc         # Claude Code (explicit)
   python dashboard.py --once             # print once and exit
   python dashboard.py --all              # show all agents side by side
 
-Supported agents: cc, hermes, gemini, goose
+Supported agents: cc, copilot, hermes, claw, gemini, goose
 """
 
 import os
@@ -30,6 +31,7 @@ AGENT_LABELS = {
     "cc":      "Claude Code",
     "claude":  "Claude Code",
     "desktop": "Claude Code Desktop",
+    "copilot": "GitHub Copilot CLI",
     "hermes":  "Hermes",
     "claw":    "Claw Code",
     "gemini":  "Gemini CLI",
@@ -46,7 +48,7 @@ def print_dashboard(agent: str) -> None:
 
 def print_all() -> None:
     os.system("cls" if os.name == "nt" else "clear")
-    for agent in ["cc", "hermes", "claw", "gemini"]:
+    for agent in ["cc", "copilot", "hermes", "claw", "gemini"]:
         data = parse_agent(agent)
         print(render(data))
         print()

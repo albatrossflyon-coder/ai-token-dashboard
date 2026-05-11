@@ -5,6 +5,7 @@ One-shot token snapshot from the command line.
 
 Usage:
   python cli.py                      # Claude Code, single snapshot
+  python cli.py --agent copilot      # GitHub Copilot CLI
   python cli.py --agent hermes       # Hermes Agent
   python cli.py --agent gemini       # Gemini CLI
   python cli.py --agent cc           # Claude Code (explicit)
@@ -53,7 +54,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.agent == "all":
-        targets = ["cc", "hermes", "claw", "gemini"]
+        targets = ["cc", "copilot", "hermes", "claw", "gemini"]
     else:
         targets = [args.agent]
 
